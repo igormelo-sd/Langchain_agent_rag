@@ -1,1 +1,110 @@
-# Langchain_agent_rag
+# Langchain with RAG and Agent 
+
+Implementação de um projeto com [LangChain](https://www.langchain.com/), combinando RAG (Retrieval-Augmented Generation) com agentes inteligentes.
+
+> 🔍 **Baseado nos repositórios de:**
+>
+> * [Thomas Janssen](https://github.com/ThomasJanssen-tech/Retrieval-Augmented-Generation/tree/main)
+> * [Alejandro AO](https://github.com/alejandro-ao/ask-multiple-pdfs)
+
+---
+
+## 📁 Acessar o diretório do projeto
+
+```bash
+cd agent_rag
+```
+
+---
+
+## ✅ Pré-requisitos
+
+* Python **3.13+**
+* Git instalado
+* Conta e chave de API da [OpenAI](https://platform.openai.com/account/api-keys)
+
+---
+
+## ⚙️ Instalação
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/alguma-coisa.git
+```
+
+### 2. Acesse o diretório
+
+```bash
+cd agent_rag
+```
+
+### 3. Crie um ambiente virtual
+
+```bash
+python -m venv venv
+```
+
+### 4. Ative o ambiente virtual
+
+**Windows (CMD):**
+
+```bash
+venv\Scripts\activate
+```
+
+**PowerShell:**
+
+```bash
+.\venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux:**
+
+```bash
+source venv/bin/activate
+```
+
+### 5. Instale as dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 6. Configure sua chave de API da OpenAI
+
+1. Obtenha a chave em: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
+2. Copie o conteúdo do arquivo `.env.example`
+3. Cole em um novo arquivo chamado `.env`
+4. Adicione sua chave no campo apropriado
+
+---
+
+## ▶️ Executando o projeto
+
+### Rodar o agente via terminal
+
+```bash
+python agent.py
+```
+
+### Rodar via Streamlit (interface web)
+
+```bash
+streamlit run streamlit_app.py
+```
+
+---
+
+## 🧠 Tecnologias utilizadas
+
+* [LangChain](https://www.langchain.com/)
+* [OpenAI API](https://platform.openai.com/)
+* [Streamlit](https://streamlit.io/)
+* Python 3.13+
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](./LICENSE) para mais detalhes.
