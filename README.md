@@ -23,7 +23,7 @@ Implementação de um projeto com [LangChain](https://www.langchain.com/), combi
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/alguma-coisa.git
+git clone https://github.com/igormelo-sd/Langchain_agent_rag.git
 ```
 
 ### 2. Acesse o diretório
