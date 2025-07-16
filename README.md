@@ -29,7 +29,7 @@ git clone https://github.com/igormelo-sd/Langchain_agent_rag.git
 ### 2. Acesse o diretório
 
 ```bash
-cd agent_rag
+cd langchain_agent_rag
 ```
 
 ### 3. Crie um ambiente virtual
