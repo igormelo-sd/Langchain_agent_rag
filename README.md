@@ -57,14 +57,19 @@ venv\Scripts\activate
 ```bash
 source venv/bin/activate
 ```
+### 5. Acesse o diretório novamente
 
-### 5. Instale as dependências
+```bash
+cd langchain_agent_rag
+```
+
+### 6. Instale as dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 6. Configure sua chave de API da OpenAI
+### 7. Configure sua chave de API da OpenAI
 
 1. Obtenha a chave em: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
 2. Copie o conteúdo do arquivo `.env.example`
