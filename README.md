@@ -99,7 +99,9 @@ python agent.py
 ```bash
 streamlit run streamlit_app.py
 ```
+
 *Sempre que for abrir o programa use `cd langchain_agent_rag` para não dá erro no programa
+
 ---
 
 ## 🧠 Tecnologias utilizadas
