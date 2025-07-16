@@ -72,8 +72,8 @@ pip install -r requirements.txt
 ### 7. Configure sua chave de API da OpenAI
 
 1. Obtenha a chave em: [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
-2. Altere o nome do arquivo de `.env.example` para `.env`
-3. Adicione sua chave no campo apropriado
+2. Crie um arquivo `.env` na mesma pasta 
+3. Adicione sua chave no campo apropriado(`OPENAI_API_KEY= "sk-..."`)
 
 ---
 
