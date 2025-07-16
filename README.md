@@ -100,7 +100,7 @@ python agent.py
 streamlit run streamlit_app.py
 ```
 
-*Sempre que for abrir o programa use `cd langchain_agent_rag` para não dá erro no programa
+* Sempre que for abrir o programa use `cd langchain_agent_rag` para não dá erro no programa
 
 ---
 
