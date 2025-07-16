@@ -91,7 +91,8 @@ python embedding.py
 ```bash
 python agent.py
 ```
-OU
+
+###OU
 
 ### Rodar via Streamlit (interface web)
 
