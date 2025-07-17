@@ -81,7 +81,7 @@ pip install -r requirements.txt
 
 ### Na pasta `data` troque o PDF do arquivo por um PDF de seu desejo
 
-Para guardar o PDF no banco vetorial precisa ir até o arquivo embedding.py, colocar o nome desejado da coleção na linha 216 e na linha 375 e então rodar o arquivo
+Para guardar o PDF no banco vetorial precisa ir até o arquivo embedding.py, colocar o nome desejado da coleção na linha 216 e na linha 375, o nome não pode possuir caracteres especiais e então rodar o arquivo
 ```bash
 python embedding.py
 ```
