@@ -12,7 +12,7 @@ Implementação de um projeto com [LangChain](https://www.langchain.com/), combi
 
 ## ✅ Pré-requisitos
 
-* Python **3.10**
+* Python **3.10+**
 * Git instalado
 * Conta e chave de API da [OpenAI](https://platform.openai.com/account/api-keys)
 
