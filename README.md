@@ -12,7 +12,7 @@ Implementação de um projeto com [LangChain](https://www.langchain.com/), combi
 
 ## ✅ Pré-requisitos
 
-* Python **3.13+**
+* Python **3.10**
 * Git instalado
 * Conta e chave de API da [OpenAI](https://platform.openai.com/account/api-keys)
 
@@ -35,10 +35,14 @@ cd langchain_agent_rag\agent_rag\rag
 ### 3. Crie um ambiente virtual
 
 ```bash
-python -m venv venv
+py -3.10 -m venv venv310
 ```
 
 ### 4. Ative o ambiente virtual
+
+```base
+.\venv310\Scripts\activate
+```
 
 **Windows (CMD):**
 
