@@ -41,9 +41,6 @@ Use o interpretador python na versão 3.10
 
 ### 4. Ative o ambiente virtual
 
-```base
-.\venv310\Scripts\activate
-```
 
 **Windows (CMD):**
 
