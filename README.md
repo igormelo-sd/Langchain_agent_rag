@@ -64,7 +64,7 @@ source venv/bin/activate
 ### 5. Acesse o diretório novamente
 
 ```bash
-cd langchain_agent_rag
+cd langchain_agent_rag\agent_rag\rag
 ```
 
 ### 6. Instale as dependências
