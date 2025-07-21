@@ -35,8 +35,9 @@ cd langchain_agent_rag\agent_rag\rag
 ### 3. Crie um ambiente virtual
 
 ```bash
-py -3.10 -m venv venv310
+python -m venv venv
 ```
+Use o interpretador python na versão 3.10 
 
 ### 4. Ative o ambiente virtual
 
