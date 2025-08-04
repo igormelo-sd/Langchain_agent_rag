@@ -1,4 +1,4 @@
-# agent_rag
+# Langchain_agent_rag
 
 Implementação de um projeto com [LangChain](https://www.langchain.com/), combinando RAG (Retrieval-Augmented Generation) com agentes inteligentes.
 
@@ -23,13 +23,13 @@ Implementação de um projeto com [LangChain](https://www.langchain.com/), combi
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/igormelo-sd/agent_rag.git
+git clone https://github.com/igormelo-sd/Langchain_agent_rag.git
 ```
 
 ### 2. Acesse o diretório
 
 ```bash
-cd langchain\agent_rag
+cd Langchain_agent_rag\langchain\agent_rag
 ```
 
 ### 3. Crie um ambiente virtual
@@ -62,7 +62,7 @@ source venv/bin/activate
 ### 5. Acesse o diretório novamente
 
 ```bash
-cd agent_rag\langchain
+cd Langchain_agent_rag\langchain\agent_rag
 ```
 
 ### 6. Instale as dependências
@@ -83,9 +83,9 @@ pip install -r requirements.txt
 
 ### Na pasta `data` troque o PDF do arquivo por um PDF de seu desejo
 
-Para guardar o PDF no banco vetorial precisa ir até o arquivo populate_database.py, colocar o nome desejado na espaço definidado para a coleção , o nome não pode possuir caracteres especiais ou espaço.
+Para guardar o PDF no banco vetorial precisa ir até o arquivo embeddding.py, colocar o nome desejado na espaço definidado para a coleção , o nome não pode possuir caracteres especiais ou espaço.
 ```bash
-python populate_database.py
+python embedding.py
 ```
 
 ### Rodar o agente via terminal
