@@ -29,7 +29,7 @@ git clone https://github.com/igormelo-sd/Langchain_agent_rag.git
 ### 2. Acesse o diretório
 
 ```bash
-cd langchain_agent_rag\agent_rag\rag
+cd langchain_agent_rag\agent_rag
 ```
 
 ### 3. Crie um ambiente virtual
@@ -62,7 +62,7 @@ source venv/bin/activate
 ### 5. Acesse o diretório novamente
 
 ```bash
-cd langchain_agent_rag\agent_rag\rag
+cd langchain_agent_rag\agent_rag
 ```
 
 ### 6. Instale as dependências
