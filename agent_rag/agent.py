@@ -1,4 +1,4 @@
-# agent.py - Versão Corrigida com Tratamento de Erros RAG
+# agent.py - Versão Corrigida - Solução para "iteration limit or time limit" e "template not assigned"
 import os
 import logging
 from typing import Dict, Any, List, Tuple
@@ -38,15 +38,12 @@ logger = logging.getLogger(__name__)
 class RAGAgentReact:
     """
     Agente RAG aprimorado com tratamento robusto de erros e fallback.
-    Funciona mesmo quando o sistema RAG não está disponível.
+    CORREÇÃO: Simplificação do prompt e controle de iterações para evitar loops.
     """
     
     def __init__(self, openai_api_key: str = None):
         """
         Inicializa o agente RAG com configurações aprimoradas e tratamento de erro.
-        
-        Args:
-            openai_api_key: Chave da API da OpenAI. Se None, será obtida do arquivo .env
         """
         # Carregar do .env se não fornecida
         if openai_api_key:
@@ -85,11 +82,11 @@ class RAGAgentReact:
         else:
             print("❌ RagSystem não disponível")
         
-        # Configuração aprimorada do LLM para respostas mais detalhadas
+        # Configuração do LLM com parâmetros otimizados
         self.llm = ChatOpenAI(
-            temperature=0.4,
+            temperature=0.3,  # Reduzido para mais consistência
             model="gpt-4o",
-            max_tokens=10000,
+            max_tokens=8000,   # Reduzido para evitar timeouts
             top_p=0.9,
         )
         
@@ -97,14 +94,14 @@ class RAGAgentReact:
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True,
-            max_token_limit=12000
+            max_token_limit=8000  # Reduzido para melhor performance
         )
         
-        # Definir ferramentas adaptáveis ao status do RAG
-        self.tools = self._create_adaptive_tools()
+        # Definir ferramentas simplificadas
+        self.tools = self._create_simplified_tools()
         
-        # Criar prompt adaptável
-        self.prompt = self._create_adaptive_prompt()
+        # Criar prompt simplificado
+        self.prompt = self._create_simplified_prompt()
         
         # Criar agente usando create_react_agent
         self.agent = create_react_agent(
@@ -113,94 +110,86 @@ class RAGAgentReact:
             prompt=self.prompt
         )
         
-        # Criar AgentExecutor com configurações aprimoradas
+        # CORREÇÃO PRINCIPAL: Configurações mais restritivas para evitar loops
         self.agent_executor = AgentExecutor(
             agent=self.agent,
             tools=self.tools,
             verbose=True,
             handle_parsing_errors=True,
-            max_iterations=5 if self.rag_available else 3,  # Menos iterações se RAG não disponível
-            max_execution_time=120,
-            return_intermediate_steps=True
+            max_iterations=3,        # REDUZIDO de 5 para 3
+            max_execution_time=60,   # REDUZIDO de 120 para 60 segundos
+            return_intermediate_steps=False,  # Desabilitado para simplicidade
+            early_stopping_method="generate"  # Para quando conseguir uma resposta
         )
         
         logger.info(f"Agente RAG inicializado - Status RAG: {self.rag_status}")
     
-    def _create_adaptive_tools(self) -> List[Tool]:
-        """Cria ferramentas que se adaptam ao status do sistema RAG."""
+    def _create_simplified_tools(self) -> List[Tool]:
+        """Cria ferramentas simplificadas para evitar loops."""
         tools = []
         
         if self.rag_available:
-            # Ferramentas completas quando RAG está disponível
-            tools.extend([
+            # CORREÇÃO: Apenas uma ferramenta principal para evitar confusão do agente
+            tools.append(
                 Tool(
-                    name="consulta_rag_principal",
-                    func=self._consultar_rag_principal,
-                    description="""Ferramenta PRINCIPAL para consultar informações sobre economia do Estado de São Paulo.
-                    Use esta ferramenta primeiro para qualquer pergunta sobre:
-                    - Indústria Automotiva
-                    - Indústria Têxtil e de Confecções
-                    - Indústria Farmacêutica
-                    - Máquinas e Equipamentos
+                    name="consultar_base_conhecimento",
+                    func=self._consultar_rag_direto,
+                    description="""FERRAMENTA PRINCIPAL: Consulta a base de conhecimento sobre economia de São Paulo.
+                    Use esta ferramenta para responder perguntas sobre:
+                    - Indústria (automotiva, têxtil, farmacêutica, metalúrgica, etc.)
+                    - Economia do Estado de São Paulo
+                    - Dados estatísticos e indicadores
                     - Mapa da Indústria Paulista
-                    - Indústria Metalúrgica
-                    - Agropecuária e Transição Energética
-                    - Balança Comercial Paulista
-                    - Biocombustíveis
+                    - Balança Comercial
+                    - Agropecuária e outros setores
                     
-                    Input: Pergunta completa do usuário
-                    Output: Informações detalhadas e estruturadas da base de conhecimento"""
-                ),
-                Tool(
-                    name="busca_dados_complementares",
-                    func=self._buscar_dados_complementares,
-                    description="""Use esta ferramenta para buscar dados complementares e estatísticas específicas
-                    quando precisar enriquecer a resposta com mais detalhes, números ou exemplos concretos.
-                    
-                    Input: Aspectos específicos que precisam de mais detalhamento
-                    Output: Dados complementares, estatísticas e informações adicionais"""
-                ),
-                Tool(
-                    name="verificar_status_sistema",
-                    func=self._verificar_status_sistema,
-                    description="""Use esta ferramenta para verificar o status do sistema RAG
-                    e diagnosticar problemas quando as outras ferramentas falharem.
-                    
-                    Input: "status" ou "diagnóstico"
-                    Output: Status detalhado do sistema"""
+                    Input: A pergunta exata do usuário
+                    Output: Resposta completa baseada na base de conhecimento"""
                 )
-            ])
+            )
         else:
-            # Ferramentas limitadas quando RAG não está disponível
-            tools.extend([
+            tools.append(
                 Tool(
-                    name="resposta_sem_rag",
-                    func=self._resposta_sem_rag,
+                    name="resposta_geral",
+                    func=self._resposta_conhecimento_geral,
                     description="""Use esta ferramenta quando o sistema RAG não estiver disponível.
-                    Fornece informações gerais sobre economia de São Paulo baseadas no conhecimento do modelo.
+                    Fornece informações gerais sobre economia de São Paulo.
                     
                     Input: Pergunta do usuário
-                    Output: Resposta baseada em conhecimento geral, com aviso sobre limitações"""
-                ),
-                Tool(
-                    name="diagnostico_sistema",
-                    func=self._diagnostico_sistema,
-                    description="""Use esta ferramenta para explicar por que o sistema RAG não está funcionando
-                    e sugerir soluções.
-                    
-                    Input: Qualquer texto
-                    Output: Diagnóstico do problema e sugestões de solução"""
+                    Output: Resposta baseada em conhecimento geral"""
                 )
-            ])
+            )
         
         return tools
     
-    def _create_adaptive_prompt(self) -> PromptTemplate:
-        """Cria um prompt que se adapta ao status do sistema RAG."""
+    def _create_simplified_prompt(self) -> PromptTemplate:
+        """Cria um prompt simplificado que evita loops infinitos."""
+        
+        # CORREÇÃO: Definir template base primeiro, depois personalizar
+        base_template = """Você é um ESPECIALISTA em economia do Estado de São Paulo.
+
+IMPORTANTE: Para saudações simples (olá, oi, bom dia, etc.) responda diretamente SEM usar ferramentas.
+
+Para outras perguntas sobre economia paulista, use as ferramentas disponíveis.
+
+Ferramentas disponíveis:
+{tools}
+
+Use o seguinte formato:
+
+Question: {input}
+Thought: análise da pergunta
+Action: escolha uma ferramenta de [{tool_names}]
+Action Input: entrada para a ferramenta
+Observation: resultado da ferramenta
+Thought: análise final
+Final Answer: resposta completa e estruturada
+
+{agent_scratchpad}"""
         
         if self.rag_available:
-            # Prompt completo quando RAG está funcionando
-            template = """ Você é um ESPECIALISTA em economia do Estado de São Paulo, com foco específico em:
+            # Template específico para quando RAG está disponível
+            template = """Você é um ESPECIALISTA em economia do Estado de São Paulo, com foco específico em:
 - Indústria Automotiva
 - Indústria Têxtil e de Confecções  
 - Indústria Farmacêutica
@@ -211,296 +200,213 @@ class RAGAgentReact:
 - Balança Comercial Paulista
 - Biocombustíveis
 
-INSTRUÇÕES IMPORTANTES PARA RESPOSTAS DETALHADAS:
+INSTRUÇÕES PARA RESPOSTAS DETALHADAS:
 
-SEMPRE use múltiplas ferramentas para coletar informações abrangentes
-Estruture suas respostas com numeração, subtópicos e formatação clara
-Inclua dados específicos, estatísticas e exemplos sempre que disponível
-Desenvolva cada ponto com explicações detalhadas, não apenas liste
-Conecte informações entre diferentes aspectos do tema
-Use linguagem técnica apropriada mas acessível
+1. Use a ferramenta disponível para coletar informações abrangentes
+2. Estruture suas respostas com numeração, subtópicos e formatação clara
+3. Inclua dados específicos, estatísticas e exemplos sempre que disponível
+4. Desenvolva cada ponto com explicações detalhadas
+5. Use linguagem técnica apropriada mas acessível
+
 FORMATO OBRIGATÓRIO para Final Answer:
 - Use numeração (1., 2., 3., etc.) para pontos principais
-- Use subtópicos com negrito para destacar aspectos importantes
+- Use subtópicos com **negrito** para destacar aspectos importantes
 - Inclua dados quantitativos quando disponível
 - Desenvolva cada ponto com pelo menos 2-3 frases explicativas
-- Termine com uma síntese/conclusão que conecte todos os pontos
-- Sempre que necessário use "consulta_rag_principal" primeiro
-- Para detalhes específicos: "busca_rag_detalhada"  
+
+EXCEÇÕES para respostas diretas (SEM usar ferramentas):
+- **Saudações**: "Olá", "Oi", "Bom dia", "Boa tarde", "Boa noite", "Tudo bem?", etc.
+- **Confirmações**: "Ok", "Entendi", "Certo", "Sim", "Não"
+- **Perguntas sobre funcionamento**: "Como você funciona?", "O que você pode fazer?"
+- **Despedidas**: "Tchau", "Até logo", "Obrigado"
+
+Para essas exceções, responda diretamente de forma amigável.
 
 Ferramentas disponíveis:
 {tools}
 
-Use o seguinte formato de raciocínio:
+Use o seguinte formato:
 
-Question: a pergunta de entrada que você deve responder
-Thought: análise da pergunta e estratégia para buscar informações abrangentes
-Action: a ação a ser tomada, deve ser uma das [{tool_names}]
-Action Input: a entrada específica para a ação
-Observation: o resultado da ação
-... (repita Thought/Action/Action Input/Observation quantas vezes necessário - use pelo menos 2-3 ferramentas diferentes)
-Thought: análise completa de todas as informações coletadas
-Final Answer: resposta DETALHADA, ESTRUTURADA e COMPLETA seguindo o formato obrigatório
+Question: {input}
+Thought: análise da pergunta e estratégia
+Action: escolha uma ferramenta de [{tool_names}]
+Action Input: entrada específica para a ferramenta
+Observation: resultado da ferramenta
+Thought: análise final de todas as informações
+Final Answer: resposta DETALHADA, ESTRUTURADA e COMPLETA
 
-LEMBRE-SE: Respostas curtas ou superficiais não são aceitáveis, exceto em casos específicos, como:
-Saudações simples (ex.: "Olá, tudo bem?", "Olá", "Oi", "Oiê", "Olá, tudo bem", "E aí", "Beleza", 
-"Fala aí", "Como vai", "Como está", "Tudo certo", "Tudo tranquilo", "Tranquilo", 
-"Suave", "Suave na nave", "De boa", "E aí, meu chapa", "E aí, parceiro", "Salve", 
-"Salve, mano", "Saudações", "Alô", "Bom dia", "Boa tarde", "Boa noite", "Como você está", 
-"Como tem passado", "Tudo em ordem", "Tudo beleza", "Tudo joia", "Tudo legal", "Tudo bacana", 
-"Tudo em paz", "Opa", "Opa, tudo certo", "E aí, firmeza", "Firme e forte", "Firmeza total", 
-"Oi, sumido", "Long time no see", "Quanto tempo", "Que bom te ver", "Que prazer te ver", "Seja bem-vindo", 
-"Bem-vindo", "Bem-vinda", "Seja bem-vinda", "Olá, meu amigo", "Olá, minha amiga", "Saudações cordiais", 
-"Saudações fraternas", "Saudações formais", "É um prazer vê-lo", "É um prazer revê-la", "Que alegria te ver", 
-"Que satisfação encontrá-lo", "Que honra tê-lo aqui", "Como vão as coisas", "Como estão as coisas", 
-"Como anda a vida", "Tudo em cima", "Tá tudo certo", "Tá tranquilo", "E aí, como foi o dia", 
-"E aí, como estão as novidades", "E aí, como vai a família", "E aí, como vai a vida", 
-"E aí, preparado pro dia", "Preparado pra batalha", "Como foi o fim de semana", "Como foi o feriado", 
-"Tudo certinho", "E aí, guerreiro", "E aí, campeã", "Fala, meu rei", "Fala, minha rainha", "Bom te ver de novo", 
-"Que bom te encontrar", "E aí, tá sumido", "Olá de novo", "Fala, meu consagrado", "Fala, minha consagrada".
-"E aí?", "Beleza?", "Fala aí?", "Como vai?", "Como está?", "Tudo certo?", "Tudo tranquilo?", "Tranquilo?", 
-"Suave?", "Suave na nave?", "De boa?");
-Perguntas extremamente objetivas ou que envolvam dados muito específicos.
-Fora essas exceções, cada resposta deve ser abrangente, bem estruturada e rica em detalhes.
+{agent_scratchpad}"""
+        else:
+            # Template para quando RAG não está disponível
+            template = """Você é um assistente especializado em economia do Estado de São Paulo.
 
-Pergunta: {input}
-Raciocínio: {agent_scratchpad}"""
+⚠️ AVISO: Sistema de base de conhecimento não disponível. Respostas baseadas em conhecimento geral.
+
+EXCEÇÕES para respostas diretas (SEM usar ferramentas):
+- **Saudações**: "Olá", "Oi", "Bom dia", etc.
+- **Confirmações**: "Ok", "Entendi", "Certo"
+- **Despedidas**: "Tchau", "Até logo"
+
+Para essas exceções, responda diretamente.
+
+Ferramentas disponíveis:
+{tools}
+
+Use o seguinte formato:
+
+Question: {input}
+Thought: análise da pergunta
+Action: escolha uma ferramenta de [{tool_names}]
+Action Input: entrada para a ferramenta
+Observation: resultado da ferramenta
+Thought: análise final
+Final Answer: resposta com base no conhecimento geral disponível
+
+{agent_scratchpad}"""
         
         return PromptTemplate.from_template(template)
     
-    def _consultar_rag_principal(self, query: str) -> str:
-        """Consulta principal do sistema RAG com tratamento robusto de erros."""
+    def _consultar_rag_direto(self, query: str) -> str:
+        """
+        CORREÇÃO: Consulta direta e simplificada do RAG.
+        """
         try:
             if not self.rag_available:
-                return "❌ Sistema RAG não disponível. Use a ferramenta de diagnóstico para mais detalhes."
+                return "❌ Sistema RAG não disponível."
             
-            logger.info(f"Consulta RAG principal: {query}")
+            logger.info(f"Consulta RAG: {query}")
             
-            # Fazer consulta principal
+            # Fazer consulta direta sem fallbacks complicados
             resultado = self.rag.query(query)
             
-            # Verificar se houve erro no resultado
             if 'error' in resultado:
-                logger.error(f"Erro no RAG: {resultado['error']}")
-                return f"⚠️ Erro no sistema RAG: {resultado['error']}\n\nResposta parcial: {resultado.get('response', 'Não foi possível obter resposta.')}"
+                return f"⚠️ Erro no sistema: {resultado['error']}"
             
             response = resultado.get("response", "")
             
-            # Verificar qualidade da resposta
             if not response or len(response) < 50:
-                return "⚠️ Sistema RAG retornou resposta muito curta ou vazia. Pode haver problemas na base de dados."
+                return "⚠️ Resposta muito curta. Sistema pode ter problemas na base de dados."
             
-            # Verificar se obteve informações suficientes
-            if len(response) < 200:
-                query_expandida = f"Informações detalhadas e completas sobre {query} no Estado de São Paulo"
-                resultado_expandido = self.rag.query(query_expandida)
-                response_expandida = resultado_expandido.get("response", "")
-                if len(response_expandida) > len(response):
-                    response = response_expandida
-            
-            # Adicionar metadados úteis
+            # Adicionar metadados simples
             num_docs = resultado.get('num_documents', 0)
             if num_docs > 0:
-                response += f"\n\n📊 _Informações baseadas em {num_docs} documento(s) da base de conhecimento._"
-            else:
-                response += "\n\n⚠️ _Nenhum documento específico encontrado na base de dados._"
+                response += f"\n\n📊 _Baseado em {num_docs} documento(s) da base de conhecimento._"
             
-            logger.info(f"RAG principal - tamanho da resposta: {len(response)}")
             return response
             
         except Exception as e:
-            logger.error(f"Erro na consulta RAG principal: {e}")
-            return f"❌ Erro crítico na consulta RAG: {str(e)}\n\nVerifique se o ChromaDB está funcionando corretamente."
+            logger.error(f"Erro na consulta RAG: {e}")
+            return f"❌ Erro na consulta: {str(e)}"
     
-    def _buscar_dados_complementares(self, aspecto: str) -> str:
-        """Busca dados complementares com tratamento de erro."""
-        try:
-            if not self.rag_available:
-                return "❌ Sistema RAG não disponível para busca complementar."
-            
-            logger.info(f"Buscando dados complementares: {aspecto}")
-            
-            # Consultas específicas para dados complementares
-            queries_complementares = [
-                f"dados estatísticos {aspecto} São Paulo",
-                f"números e indicadores {aspecto}",
-                f"exemplos práticos {aspecto} indústria paulista"
-            ]
-            
-            respostas_complementares = []
-            for query in queries_complementares:
-                try:
-                    resultado = self.rag.query(query)
-                    if 'error' not in resultado:
-                        response = resultado.get("response", "")
-                        if response and len(response) > 50:
-                            respostas_complementares.append(response)
-                except Exception as query_error:
-                    logger.warning(f"Erro em consulta complementar: {query_error}")
-                    continue
-            
-            # Combinar as melhores respostas
-            if respostas_complementares:
-                resposta_final = " | ".join(respostas_complementares[:2])
-                logger.info(f"Dados complementares encontrados: {len(resposta_final)} caracteres")
-                return resposta_final
-            else:
-                return "⚠️ Dados complementares específicos não encontrados ou sistema com problemas."
-                
-        except Exception as e:
-            logger.error(f"Erro ao buscar dados complementares: {e}")
-            return f"❌ Erro na busca de dados complementares: {str(e)}"
-    
-    def _verificar_status_sistema(self, input_text: str) -> str:
-        """Verifica o status do sistema RAG e fornece diagnóstico."""
-        try:
-            if not self.rag_available:
-                return f"""❌ **Sistema RAG Indisponível**
-
-Status atual: {self.rag_status}
-
-**Possíveis causas:**
-1. ChromaDB não instalado ou com problemas
-2. Base de dados vazia ou corrompida
-3. Modelos de embedding não funcionando
-4. Problemas de configuração
-
-**Soluções sugeridas:**
-1. Verificar instalação: `pip install chromadb sentence-transformers`
-2. Verificar se há documentos na base
-3. Reinicializar o sistema
-4. Verificar logs de erro detalhados"""
-            
-            # Obter status detalhado do sistema RAG
-            status = self.rag.get_system_status()
-            
-            status_text = "✅ **Sistema RAG Ativo**\n\n"
-            status_text += f"**Detalhes do Sistema:**\n"
-            status_text += f"- Inicializado: {'✅' if status['initialized'] else '❌'}\n"
-            status_text += f"- ChromaDB: {'✅' if status['chroma_client'] else '❌'}\n"
-            status_text += f"- OpenAI: {'✅' if status['openai_client'] else '❌'}\n"
-            status_text += f"- Coleção existe: {'✅' if status['collection_exists'] else '❌'}\n"
-            status_text += f"- Documentos na base: {status['collection_count']}\n"
-            status_text += f"- Reranking: {'✅' if status['reranking_enabled'] else '❌'}\n"
-            status_text += f"- Logging: {'✅' if status['logging_enabled'] else '❌'}\n"
-            
-            if 'collection_error' in status:
-                status_text += f"\n⚠️ **Erro na coleção:** {status['collection_error']}"
-            
-            return status_text
-            
-        except Exception as e:
-            return f"❌ Erro ao verificar status: {str(e)}"
-    
-    def _resposta_sem_rag(self, query: str) -> str:
-        """Fornece resposta baseada em conhecimento geral quando RAG não está disponível."""
-        logger.info(f"Respondendo sem RAG: {query}")
-        
+    def _resposta_conhecimento_geral(self, query: str) -> str:
+        """Resposta quando RAG não está disponível."""
         return f"""⚠️ **Sistema de base de conhecimento indisponível**
 
-Sua pergunta: "{query}"
+Pergunta: "{query}"
 
 **Resposta baseada em conhecimento geral:**
 
-São Paulo é o principal centro econômico do Brasil, com destaque especial na indústria automotiva. O estado concentra grande parte da produção nacional de veículos, com plantas das principais montadoras como Volkswagen, General Motors, Ford, Toyota, Honda, entre outras.
+São Paulo é o principal centro econômico do Brasil, responsável por cerca de 1/3 do PIB nacional. O estado se destaca em diversos setores:
 
-**Setores importantes em SP:**
-- **Indústria Automotiva**: Região do ABC, Campinas, São José dos Campos
-- **Indústria Farmacêutica**: Concentrada na região metropolitana
-- **Têxtil e Confecções**: Tradicional setor paulista
+**Principais Setores:**
+- **Indústria Automotiva**: Concentrada no ABC paulista e região de Campinas
+- **Indústria Farmacêutica**: Forte presença na região metropolitana
+- **Têxtil e Confecções**: Setor tradicional do estado
 - **Máquinas e Equipamentos**: Distribuído por várias regiões
-- **Metalurgia**: Forte presença no interior
+- **Agropecuária**: Interior do estado, forte em cana-de-açúcar, café, laranja
 
-**⚠️ IMPORTANTE**: Esta resposta é baseada em conhecimento geral e pode estar desatualizada. Para informações precisas e atualizadas, recomendo:
-1. Consultar dados oficiais da FIESP
-2. Verificar relatórios da Fundação SEADE
-3. Acessar dados do IBGE sobre indústria paulista
+**⚠️ IMPORTANTE**: Resposta baseada em conhecimento geral. Para informações precisas, consulte:
+- FIESP (Federação das Indústrias do Estado de São Paulo)
+- Fundação SEADE
+- IBGE
 
-**Status do sistema**: {self.rag_status}"""
+Status do sistema RAG: {self.rag_status}"""
     
-    def _diagnostico_sistema(self, input_text: str) -> str:
-        """Fornece diagnóstico detalhado do problema no sistema."""
-        return f"""🔧 **Diagnóstico do Sistema RAG**
-
-**Status atual**: Sistema RAG indisponível
-**Causa**: {self.rag_status}
-
-**Verificações necessárias:**
-
-1. **Dependências Python:**
-   ```bash
-   pip install chromadb sentence-transformers python-dotenv langchain-openai
-   ```
-
-2. **Variáveis de ambiente:**
-   - Verificar se existe arquivo .env
-   - Confirmar OPENAI_API_KEY configurada
-
-3. **Base de dados ChromaDB:**
-   - Verificar se existe pasta chroma_db/
-   - Confirmar se há documentos indexados
-   - Testar acesso à coleção
-
-4. **Modelos de embedding:**
-   - Verificar download automático dos modelos
-   - Confirmar funcionamento do sentence-transformers
-
-**Próximos passos:**
-1. Verificar logs detalhados no terminal
-2. Testar inicialização manual do RagSystem
-3. Verificar se todos os arquivos estão no lugar correto
-4. Considerar reindexação dos documentos
-
-**Modo atual**: Funcionando apenas com conhecimento geral do modelo."""
+    def _is_simple_greeting(self, text: str) -> bool:
+        """Verifica se é uma saudação simples que não precisa de ferramentas."""
+        greetings = [
+            "olá", "oi", "oiê", "ola", "bom dia", "boa tarde", "boa noite",
+            "como vai", "tudo bem", "e aí", "salve", "alô", "hello", "hi"
+        ]
+        text_lower = text.lower().strip()
+        return any(greeting in text_lower for greeting in greetings) and len(text_lower) < 20
     
     def consultar(self, pergunta: str) -> str:
         """
-        Consulta o agente com uma pergunta, adaptando-se ao status do RAG.
-        
-        Args:
-            pergunta: Pergunta sobre economia do Estado de São Paulo
-            
-        Returns:
-            Resposta detalhada e estruturada do agente
+        CORREÇÃO PRINCIPAL: Consulta simplificada que evita loops.
         """
         if not pergunta.strip():
-            return "Por favor, forneça uma pergunta válida sobre economia do Estado de São Paulo."
+            return "Por favor, forneça uma pergunta válida."
         
         try:
             logger.info(f"Processando pergunta: {pergunta}")
             
-            # Preparar input com contexto sobre status do sistema
-            if self.rag_available:
-                input_aprimorado = f"""
-                PERGUNTA: {pergunta}
-                
-                IMPORTANTE: Forneça uma resposta COMPLETA e DETALHADA seguindo estas diretrizes:
-                1. Use múltiplas ferramentas para coletar informações abrangentes
-                2. Estruture a resposta com numeração e subtópicos
-                3. Inclua dados específicos e exemplos quando disponível
-                4. Desenvolva cada ponto com explicações detalhadas
-                5. Conecte diferentes aspectos do tema
-                """
-            else:
-                input_aprimorado = f"""
-                PERGUNTA: {pergunta}
-                
-                CONTEXTO: Sistema RAG indisponível (Status: {self.rag_status})
-                Forneça a melhor resposta possível com as ferramentas disponíveis.
-                """
+            # CORREÇÃO: Verificar se é saudação simples
+            if self._is_simple_greeting(pergunta):
+                return """👋 **Olá! Seja bem-vindo!**
+
+Sou um assistente especializado em economia do Estado de São Paulo. Posso ajudá-lo com informações sobre:
+
+🏭 **Setores Industriais:**
+- Indústria Automotiva
+- Indústria Têxtil e Confecções
+- Indústria Farmacêutica
+- Máquinas e Equipamentos
+- Indústria Metalúrgica
+
+📊 **Dados Econômicos:**
+- Balança Comercial Paulista
+- Mapa da Indústria Paulista
+- Agropecuária e Transição Energética
+- Biocombustíveis
+
+💬 **Como posso ajudar?**
+Faça sua pergunta sobre qualquer aspecto da economia paulista!"""
             
-            resultado = self.agent_executor.invoke({"input": input_aprimorado})
+            # CORREÇÃO: Input mais simples, sem instruções complexas
+            input_simples = pergunta
+            
+            # Executar com timeout mais restritivo
+            resultado = self.agent_executor.invoke(
+                {"input": input_simples},
+                config={"max_execution_time": 45}  # 45 segundos máximo
+            )
+            
             resposta = resultado.get("output", "Não foi possível obter uma resposta.")
             
-            # Adicionar aviso sobre status do sistema se necessário
-            if not self.rag_available and "⚠️" not in resposta:
-                resposta = f"⚠️ **Sistema de base de conhecimento indisponível**\n\n{resposta}\n\n_Resposta baseada em conhecimento geral. Para informações precisas, verifique o sistema RAG._"
+            # CORREÇÃO: Verificar se a resposta é válida
+            if "Agent stopped due to iteration limit" in resposta:
+                # Fallback direto quando há problema de iteração
+                if self.rag_available:
+                    logger.warning("Fallback: usando consulta RAG direta")
+                    return self._consultar_rag_direto(pergunta)
+                else:
+                    logger.warning("Fallback: usando conhecimento geral")
+                    return self._resposta_conhecimento_geral(pergunta)
             
             return resposta
             
         except Exception as e:
             logger.error(f"Erro ao consultar agente: {e}")
-            return f"Erro ao processar a consulta: {str(e)}\n\nStatus do sistema RAG: {self.rag_status}"
+            
+            # CORREÇÃO: Fallback robusto em caso de erro
+            if self.rag_available:
+                try:
+                    logger.info("Tentando fallback com RAG direto")
+                    return self._consultar_rag_direto(pergunta)
+                except:
+                    pass
+            
+            return f"""❌ **Erro no processamento**
+
+Ocorreu um erro ao processar sua pergunta: {str(e)}
+
+**Possíveis soluções:**
+1. Tente reformular a pergunta
+2. Verifique se é uma pergunta sobre economia de São Paulo
+3. Se o problema persistir, reinicie o sistema
+
+Status do RAG: {self.rag_status}"""
     
     def get_system_info(self) -> Dict[str, Any]:
         """Retorna informações sobre o status do sistema."""
@@ -508,7 +414,9 @@ São Paulo é o principal centro econômico do Brasil, com destaque especial na 
             "rag_available": self.rag_available,
             "rag_status": self.rag_status,
             "tools_count": len(self.tools),
-            "agent_ready": hasattr(self, 'agent_executor')
+            "agent_ready": hasattr(self, 'agent_executor'),
+            "max_iterations": 3,  # Atualizado
+            "max_execution_time": 60  # Atualizado
         }
         
         if self.rag_available and hasattr(self, 'rag'):
@@ -522,8 +430,7 @@ São Paulo é o principal centro econômico do Brasil, com destaque especial na 
     
     def __call__(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Método para compatibilidade com Streamlit.
-        Permite usar o agente como se fosse uma chain do LangChain.
+        CORREÇÃO: Método para compatibilidade com Streamlit simplificado.
         """
         question = inputs.get("question", "")
         
@@ -539,12 +446,13 @@ São Paulo é o principal centro econômico do Brasil, com destaque especial na 
         
         # Retornar no formato esperado pelo Streamlit
         return {
-            "chat_history": self.memory.chat_memory.messages
+            "chat_history": self.memory.chat_memory.messages,
+            "output": response  # Adicionar output direto para compatibilidade
         }
     
     def run_interactive(self):
-        """Executa o loop interativo com informações sobre o status do sistema."""
-        print("=== Agente RAG Adaptativo - Sistema de Consulta ===")
+        """Executa o loop interativo."""
+        print("=== Agente RAG Corrigido - Sistema de Consulta ===")
         print("Especialista em economia do Estado de São Paulo")
         
         # Mostrar status do sistema
@@ -552,104 +460,69 @@ São Paulo é o principal centro econômico do Brasil, com destaque especial na 
         print(f"\n📊 **Status do Sistema:**")
         print(f"RAG disponível: {'✅ Sim' if system_info['rag_available'] else '❌ Não'}")
         print(f"Status: {system_info['rag_status']}")
-        print(f"Ferramentas ativas: {system_info['tools_count']}")
+        print(f"Máx iterações: {system_info['max_iterations']}")
+        print(f"Timeout: {system_info['max_execution_time']}s")
         
-        if not system_info['rag_available']:
-            print(f"\n⚠️ **MODO LIMITADO**: Sistema funcionando apenas com conhecimento geral")
-            print(f"Para funcionalidade completa, resolva os problemas do RAG")
-        
-        print(f"\nDigite 'sair' para encerrar, 'status' para diagnóstico\n")
+        print(f"\nDigite 'sair' para encerrar\n")
         
         while True:
             try:
-                user_input = input("Digite sua pergunta sobre economia de São Paulo:\n> ").strip()
+                user_input = input("> ").strip()
                 
                 if user_input.lower() in ["sair", "exit", "quit"]:
-                    print("Encerrando o agente. Até logo!")
+                    print("Encerrando. Até logo!")
                     break
                 
-                if user_input.lower() == "status":
-                    info = self.get_system_info()
-                    print("\n" + "="*60)
-                    print("INFORMAÇÕES DO SISTEMA:")
-                    print("="*60)
-                    for key, value in info.items():
-                        print(f"{key}: {value}")
-                    print("="*60 + "\n")
-                    continue
-                
                 if not user_input:
-                    print("Por favor, digite uma pergunta.\n")
                     continue
                 
-                print(f"\n🔍 Analisando sua pergunta...")
-                if self.rag_available:
-                    print("⚙️ Usando sistema RAG completo...")
-                else:
-                    print("⚠️ Usando modo limitado (sem base de conhecimento)...")
-                
+                print(f"\n🔍 Processando...")
                 resposta = self.consultar(user_input)
                 
-                print(f"\n{'='*80}")
+                print(f"\n{'='*60}")
                 print("📊 RESPOSTA:")
-                print(f"{'='*80}")
+                print(f"{'='*60}")
                 print(f"{resposta}")
-                print(f"{'='*80}\n")
+                print(f"{'='*60}\n")
                 
             except KeyboardInterrupt:
-                print("\nEncerrando o agente. Até logo!")
+                print("\nEncerrando. Até logo!")
                 break
             except Exception as e:
-                logger.error(f"Erro no loop interativo: {e}")
-                print(f"Erro inesperado: {e}\n")
+                logger.error(f"Erro no loop: {e}")
+                print(f"Erro: {e}\n")
 
 
 def create_rag_agent():
     """
-    Função para criar o agente RAG aprimorado com tratamento de erro.
-    Esta função é chamada pelo streamlit.py
+    CORREÇÃO: Função para criar o agente RAG corrigido.
     """
     try:
-        # Desabilitar telemetria do ChromaDB (opcional)
         os.environ["ANONYMIZED_TELEMETRY"] = "False"
         
-        print("Inicializando agente RAG adaptativo...")
+        print("Inicializando agente RAG corrigido...")
         agent = RAGAgentReact()
         
-        # Verificar status do sistema
         system_info = agent.get_system_info()
         if system_info['rag_available']:
-            print("✅ Agente RAG completo inicializado com sucesso!")
+            print("✅ Agente RAG completo inicializado!")
         else:
-            print(f"⚠️ Agente inicializado em modo limitado - RAG Status: {system_info['rag_status']}")
+            print(f"⚠️ Agente em modo limitado - Status: {system_info['rag_status']}")
         
         return agent
         
     except Exception as e:
-        print(f"❌ Erro ao inicializar agente: {e}")
+        print(f"❌ Erro ao inicializar: {e}")
         raise
 
 
-# Exemplo de uso
 if __name__ == "__main__":
     try:
-        # Desabilitar telemetria do ChromaDB (opcional)
         os.environ["ANONYMIZED_TELEMETRY"] = "False"
-        
-        print("Inicializando agente RAG adaptativo...")
-        
-        # Criar agente adaptativo
         agent = RAGAgentReact()
-        
-        # Executar loop interativo
         agent.run_interactive()
         
     except ValueError as e:
         print(f"Erro de configuração: {e}")
-        print("\nOpções para configurar a API key:")
-        print("1. Variável de ambiente: set OPENAI_API_KEY=sk-seu-token-aqui")
-        print("2. Arquivo .env: OPENAI_API_KEY=sk-seu-token-aqui")
-        print("3. Parâmetro direto: RAGAgentReact(openai_api_key='sk-seu-token-aqui')")
     except Exception as e:
-        print(f"Erro ao inicializar agente: {e}")
-        print("Verifique se as dependências estão instaladas e a chave da OpenAI está configurada.")
+        print(f"Erro: {e}")
