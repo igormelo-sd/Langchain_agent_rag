@@ -1,3 +1,4 @@
+# main.py
 import subprocess
 import os
 
@@ -14,3 +15,4 @@ else:
         subprocess.run(["streamlit", "run", streamlit_file])
     except Exception as e:
         print(f"Erro ao executar Streamlit: {e}")
+
