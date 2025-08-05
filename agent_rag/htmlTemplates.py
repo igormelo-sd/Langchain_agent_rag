@@ -1,4 +1,4 @@
-# htmlTemplates.py - COM GIF CENTRALIZADO E FUNDO FIXO
+# htmlTemplates.py
 import streamlit as st
 import base64
 import os
@@ -1345,4 +1345,5 @@ if __name__ == "__main__":
     print(f"📊 Waiting Template: {len(waiting_template) if 'waiting_template' in globals() else 0} caracteres")
     print(f"🔧 Sistema de limpeza ativo para prevenir quadrado branco")
     print(f"🎯 Sistema de GIF centralizado implementado")
+
     print(f"🖼️ Sistema de fundo personalizado implementado")
