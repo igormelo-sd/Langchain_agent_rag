@@ -1,4 +1,4 @@
-# rag_system.py - Versão Corrigida com Tratamento de Erros Aprimorado
+# rag_system.py 
 import chromadb
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -643,4 +643,5 @@ def main():
         print("3. Verificar se há documentos na base ChromaDB")
 
 if __name__ == "__main__":
+
     main()
