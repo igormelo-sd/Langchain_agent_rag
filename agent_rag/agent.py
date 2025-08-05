@@ -1,4 +1,4 @@
-# agent.py - Versão Corrigida - Solução para "iteration limit or time limit" e "template not assigned"
+# agent.py 
 import os
 import logging
 from typing import Dict, Any, List, Tuple
@@ -526,3 +526,4 @@ if __name__ == "__main__":
         print(f"Erro de configuração: {e}")
     except Exception as e:
         print(f"Erro: {e}")
+
