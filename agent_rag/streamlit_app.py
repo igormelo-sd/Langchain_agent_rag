@@ -1,4 +1,4 @@
-# streamlit_app.py - VERSÃO COM GIF CENTRALIZADO E FUNDO FIXO
+# streamlit_app.py 
 import streamlit as st
 from dotenv import load_dotenv
 from htmlTemplates import (
@@ -869,3 +869,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
